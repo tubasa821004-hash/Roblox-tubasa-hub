@@ -1,249 +1,182 @@
--- Tsubasa Hub - All In One Pro (Delta)
+-- Tsubasa Hub - Fly+Controller Set / Others Toggle (Delta)
 
 local Players = game:GetService("Players")
 local UIS = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
-local VirtualUser = game:GetService("VirtualUser")
 
 local Player = Players.LocalPlayer
 
 ------------------------------------------------
--- Anti Detect / Anti AFK
+-- GUI
 ------------------------------------------------
-Player.Idled:Connect(function()
-    VirtualUser:Button2Down(Vector2.new(0,0),workspace.CurrentCamera.CFrame)
-    task.wait(1)
-    VirtualUser:Button2Up(Vector2.new(0,0),workspace.CurrentCamera.CFrame)
-end)
-
-------------------------------------------------
--- GUI Base
-------------------------------------------------
-local gui = Instance.new("ScreenGui")
+local gui = Instance.new("ScreenGui", Player.PlayerGui)
 gui.Name = "TsubasaHub"
 gui.ResetOnSpawn = false
-gui.Parent = Player:WaitForChild("PlayerGui")
 
-------------------------------------------------
--- Main Frame
-------------------------------------------------
 local frame = Instance.new("Frame", gui)
-frame.Size = UDim2.new(0,190,0,280)
-frame.Position = UDim2.new(0.05,0,0.2,0)
+frame.Size = UDim2.new(0, 185, 0, 330)
+frame.Position = UDim2.new(0.05, 0, 0.22, 0)
 frame.BackgroundColor3 = Color3.fromRGB(35,35,35)
+frame.BorderSizePixel = 0
 frame.Active = true
 frame.Draggable = true
-frame.BorderSizePixel = 0
-
-Instance.new("UICorner", frame).CornerRadius = UDim.new(0,10)
+Instance.new("UICorner", frame)
 
 local title = Instance.new("TextLabel", frame)
-title.Size = UDim2.new(1,0,0,30)
+title.Size = UDim2.new(1,0,0,28)
 title.BackgroundTransparency = 1
 title.Text = "Tsubasa Hub"
 title.TextColor3 = Color3.new(1,1,1)
-title.TextSize = 16
 title.Font = Enum.Font.SourceSansBold
+title.TextSize = 15
 
-------------------------------------------------
--- Button Maker
-------------------------------------------------
 local function MakeBtn(text,y,func)
-
-    local b = Instance.new("TextButton",frame)
-
-    b.Size = UDim2.new(0,160,0,28)
+    local b = Instance.new("TextButton", frame)
+    b.Size = UDim2.new(0,155,0,26)
     b.Position = UDim2.new(0,15,0,y)
-
     b.Text = text
+    b.TextSize = 13
     b.BackgroundColor3 = Color3.fromRGB(60,60,60)
     b.TextColor3 = Color3.new(1,1,1)
-    b.TextSize = 14
     b.BorderSizePixel = 0
-
-    Instance.new("UICorner",b).CornerRadius = UDim.new(0,6)
-
+    Instance.new("UICorner", b)
     b.MouseButton1Click:Connect(func)
-
     return b
 end
 
 ------------------------------------------------
--- Fly System
+-- Fly + Controller (SET)
 ------------------------------------------------
 local flying = false
-local speedFly = 70
-
-local keys = {
-    W=false,A=false,S=false,D=false,
-    Up=false,Down=false
-}
-
+local flySpeed = 65
+local dir = {F=false,B=false,L=false,R=false,U=false,D=false}
 local bv,bg
 
-local function StartFly()
+-- Mobile Controller
+local controller = Instance.new("Frame", gui)
+controller.Size = UDim2.new(0,220,0,140)
+controller.Position = UDim2.new(0.25,0,0.75,0)
+controller.BackgroundTransparency = 1
+controller.Visible = false
 
+local function Pad(txt,x,y,key)
+    local b = Instance.new("TextButton", controller)
+    b.Size = UDim2.new(0,40,0,40)
+    b.Position = UDim2.new(0,x,0,y)
+    b.Text = txt
+    b.TextSize = 22
+    b.BackgroundColor3 = Color3.fromRGB(70,70,70)
+    b.TextColor3 = Color3.new(1,1,1)
+    b.BorderSizePixel = 0
+    Instance.new("UICorner", b)
+    b.MouseButton1Down:Connect(function() dir[key]=true end)
+    b.MouseButton1Up:Connect(function() dir[key]=false end)
+end
+
+Pad("↑",50,0,"F")
+Pad("↓",50,80,"B")
+Pad("←",0,40,"L")
+Pad("→",100,40,"R")
+Pad("⤴",160,10,"U")
+Pad("⤵",160,70,"D")
+
+local function StartFly()
     local char = Player.Character
     if not char then return end
     local hrp = char:WaitForChild("HumanoidRootPart")
 
-    bv = Instance.new("BodyVelocity",hrp)
+    bv = Instance.new("BodyVelocity", hrp)
     bv.MaxForce = Vector3.new(1e5,1e5,1e5)
 
-    bg = Instance.new("BodyGyro",hrp)
+    bg = Instance.new("BodyGyro", hrp)
     bg.MaxTorque = Vector3.new(1e5,1e5,1e5)
     bg.P = 9e4
 
-    RunService:BindToRenderStep("ProFly",200,function()
-
+    RunService:BindToRenderStep("FlyMove",200,function()
         if not flying then return end
-
         local cam = workspace.CurrentCamera
-        local move = Vector3.zero
-
-        if keys.W then move += cam.CFrame.LookVector end
-        if keys.S then move -= cam.CFrame.LookVector end
-        if keys.A then move -= cam.CFrame.RightVector end
-        if keys.D then move += cam.CFrame.RightVector end
-        if keys.Up then move += cam.CFrame.UpVector end
-        if keys.Down then move -= cam.CFrame.UpVector end
-
-        if move.Magnitude > 0 then
-            move = move.Unit * speedFly
-        end
-
-        bv.Velocity = move
+        local v = Vector3.zero
+        if dir.F then v+=cam.CFrame.LookVector end
+        if dir.B then v-=cam.CFrame.LookVector end
+        if dir.L then v-=cam.CFrame.RightVector end
+        if dir.R then v+=cam.CFrame.RightVector end
+        if dir.U then v+=cam.CFrame.UpVector end
+        if dir.D then v-=cam.CFrame.UpVector end
+        if v.Magnitude>0 then v=v.Unit*flySpeed end
+        bv.Velocity = v
         bg.CFrame = cam.CFrame
     end)
+
+    if UIS.TouchEnabled then controller.Visible = true end
 end
 
 local function StopFly()
-
     flying = false
-    RunService:UnbindFromRenderStep("ProFly")
-
+    RunService:UnbindFromRenderStep("FlyMove")
     if bv then bv:Destroy() end
     if bg then bg:Destroy() end
+    controller.Visible = false
 end
 
 ------------------------------------------------
--- PC Input
+-- Invisible (TOGGLE)
 ------------------------------------------------
-UIS.InputBegan:Connect(function(i,g)
-    if g then return end
-
-    if i.KeyCode==Enum.KeyCode.W then keys.W=true end
-    if i.KeyCode==Enum.KeyCode.A then keys.A=true end
-    if i.KeyCode==Enum.KeyCode.S then keys.S=true end
-    if i.KeyCode==Enum.KeyCode.D then keys.D=true end
-    if i.KeyCode==Enum.KeyCode.Space then keys.Up=true end
-    if i.KeyCode==Enum.KeyCode.LeftControl then keys.Down=true end
-end)
-
-UIS.InputEnded:Connect(function(i)
-
-    if i.KeyCode==Enum.KeyCode.W then keys.W=false end
-    if i.KeyCode==Enum.KeyCode.A then keys.A=false end
-    if i.KeyCode==Enum.KeyCode.S then keys.S=false end
-    if i.KeyCode==Enum.KeyCode.D then keys.D=false end
-    if i.KeyCode==Enum.KeyCode.Space then keys.Up=false end
-    if i.KeyCode==Enum.KeyCode.LeftControl then keys.Down=false end
-end)
-
-------------------------------------------------
--- Mobile Panel
-------------------------------------------------
-if UIS.TouchEnabled then
-
-    local pad = Instance.new("Frame",gui)
-    pad.Size = UDim2.new(0,120,0,120)
-    pad.Position = UDim2.new(0.05,0,0.7,0)
-    pad.BackgroundColor3 = Color3.fromRGB(50,50,50)
-    pad.BackgroundTransparency = 0.3
-    Instance.new("UICorner",pad).CornerRadius = UDim.new(1,0)
-
-    local stick = Instance.new("Frame",pad)
-    stick.Size = UDim2.new(0,40,0,40)
-    stick.Position = UDim2.new(0.5,-20,0.5,-20)
-    stick.BackgroundColor3 = Color3.fromRGB(200,200,200)
-    Instance.new("UICorner",stick).CornerRadius = UDim.new(1,0)
-
-    local drag=false
-
-    pad.InputBegan:Connect(function(i)
-        if i.UserInputType==Enum.UserInputType.Touch then
-            drag=true
+local invisible=false
+local saved={}
+local function SetInvisible(on)
+    local char=Player.Character if not char then return end
+    if on then
+        saved={}
+        for _,v in pairs(char:GetDescendants()) do
+            if v:IsA("BasePart") or v:IsA("Decal") then
+                saved[v]=v.Transparency
+                v.Transparency=1
+            end
         end
-    end)
-
-    pad.InputEnded:Connect(function(i)
-        if i.UserInputType==Enum.UserInputType.Touch then
-            drag=false
-            stick.Position=UDim2.new(0.5,-20,0.5,-20)
-            keys.W=false keys.A=false keys.S=false keys.D=false
+    else
+        for p,t in pairs(saved) do
+            if p and p.Parent then p.Transparency=t end
         end
-    end)
-
-    pad.InputChanged:Connect(function(i)
-
-        if drag and i.UserInputType==Enum.UserInputType.Touch then
-
-            local pos=(i.Position-pad.AbsolutePosition)/pad.AbsoluteSize
-            local x=math.clamp(pos.X*2-1,-1,1)
-            local z=math.clamp(-(pos.Y*2-1),-1,1)
-
-            stick.Position=UDim2.new(pos.X,-20,pos.Y,-20)
-
-            keys.W = z>0.3
-            keys.S = z<-0.3
-            keys.D = x>0.3
-            keys.A = x<-0.3
-        end
-    end)
-
-    local function MakeUD(text,y,val)
-
-        local b=Instance.new("TextButton",gui)
-        b.Size=UDim2.new(0,50,0,50)
-        b.Position=UDim2.new(0.85,-60,y,0)
-        b.Text=text
-        b.TextSize=28
-
-        b.MouseButton1Down:Connect(function()
-            if val==1 then keys.Up=true else keys.Down=true end
-        end)
-
-        b.MouseButton1Up:Connect(function()
-            if val==1 then keys.Up=false else keys.Down=false end
-        end)
+        saved={}
     end
-
-    MakeUD("↑",0.6,1)
-    MakeUD("↓",0.75,-1)
 end
 
 ------------------------------------------------
--- ESP
+-- NoClip (TOGGLE)
 ------------------------------------------------
-local espOn=false
+local noclip=false
+local noclipConn
+local function SetNoClip(on)
+    local char=Player.Character if not char then return end
+    if on then
+        noclipConn=RunService.Stepped:Connect(function()
+            for _,v in pairs(char:GetDescendants()) do
+                if v:IsA("BasePart") then v.CanCollide=false end
+            end
+        end)
+    else
+        if noclipConn then noclipConn:Disconnect() end
+        for _,v in pairs(char:GetDescendants()) do
+            if v:IsA("BasePart") then v.CanCollide=true end
+        end
+    end
+end
+
+------------------------------------------------
+-- ESP (TOGGLE)
+------------------------------------------------
+local esp=false
 local espFolder=Instance.new("Folder",gui)
-
-local function ClearESP()
+local function SetESP(on)
     espFolder:ClearAllChildren()
-end
-
-local function ApplyESP()
-
-    ClearESP()
-
-    for _,plr in ipairs(Players:GetPlayers()) do
-        if plr~=Player and plr.Character then
-
-            local h=Instance.new("Highlight")
-            h.Adornee=plr.Character
-            h.FillColor=Color3.fromRGB(255,60,60)
-            h.FillTransparency=0.5
-            h.Parent=espFolder
+    if on then
+        for _,p in pairs(Players:GetPlayers()) do
+            if p~=Player and p.Character then
+                local h=Instance.new("Highlight",espFolder)
+                h.Adornee=p.Character
+                h.FillColor=Color3.fromRGB(255,60,60)
+                h.FillTransparency=0.5
+            end
         end
     end
 end
@@ -252,10 +185,8 @@ end
 -- Buttons
 ------------------------------------------------
 local flyBtn
-flyBtn = MakeBtn("Fly : OFF",40,function()
-
+flyBtn = MakeBtn("Fly : OFF",35,function()
     flying=not flying
-
     if flying then
         flyBtn.Text="Fly : ON"
         StartFly()
@@ -265,34 +196,41 @@ flyBtn = MakeBtn("Fly : OFF",40,function()
     end
 end)
 
+local invBtn
+invBtn = MakeBtn("Invisible : OFF",70,function()
+    invisible=not invisible
+    invBtn.Text="Invisible : "..(invisible and "ON" or "OFF")
+    SetInvisible(invisible)
+end)
+
+local nocBtn
+nocBtn = MakeBtn("NoClip : OFF",105,function()
+    noclip=not noclip
+    nocBtn.Text="NoClip : "..(noclip and "ON" or "OFF")
+    SetNoClip(noclip)
+end)
+
 local espBtn
-espBtn = MakeBtn("ESP : OFF",80,function()
-
-    espOn=not espOn
-
-    if espOn then
-        espBtn.Text="ESP : ON"
-        ApplyESP()
-    else
-        espBtn.Text="ESP : OFF"
-        ClearESP()
-    end
+espBtn = MakeBtn("ESP : OFF",140,function()
+    esp=not esp
+    espBtn.Text="ESP : "..(esp and "ON" or "OFF")
+    SetESP(esp)
 end)
 
-MakeBtn("Speed",120,function()
-    local hum=Player.Character and Player.Character:FindFirstChildOfClass("Humanoid")
-    if hum then hum.WalkSpeed=80 end
+MakeBtn("Speed ON",175,function()
+    local h=Player.Character:FindFirstChildOfClass("Humanoid")
+    if h then h.WalkSpeed=80 end
 end)
 
-MakeBtn("Jump",160,function()
-    local hum=Player.Character and Player.Character:FindFirstChildOfClass("Humanoid")
-    if hum then
-        hum:ChangeState(Enum.HumanoidStateType.Jumping)
-    end
+MakeBtn("Jump",210,function()
+    local h=Player.Character:FindFirstChildOfClass("Humanoid")
+    if h then h:ChangeState(Enum.HumanoidStateType.Jumping) end
 end)
 
-MakeBtn("Close",210,function()
+MakeBtn("Close",255,function()
     StopFly()
-    ClearESP()
+    SetInvisible(false)
+    SetNoClip(false)
+    SetESP(false)
     gui:Destroy()
 end)
