@@ -1,4 +1,4 @@
--- Tsubasa Hub Ultimate Full Pack (Fixed CloneCam)
+-- Tsubasa Hub Ultimate Full Pack (Delta/Mobile)
 
 local Players = game:GetService("Players")
 local UIS = game:GetService("UserInputService")
@@ -50,11 +50,13 @@ local function MakeBtn(text,y,func)
 end
 
 ------------------------------------------------
--- Fly
+-- Fly System
 ------------------------------------------------
-local flying=false
-local flySpeed=65
-local dir={F=false,B=false,L=false,R=false,U=false,D=false}
+local flying = false
+local flySpeed = 65
+
+local dir = {F=false,B=false,L=false,R=false,U=false,D=false}
+
 local bv,bg
 
 ------------------------------------------------
@@ -89,10 +91,13 @@ local function MakePad(txt,x,y,flag)
     return b
 end
 
+-- Move
 MakePad("↑",60,0,"F")
 MakePad("↓",60,80,"B")
 MakePad("←",10,40,"L")
 MakePad("→",110,40,"R")
+
+-- Up / Down
 MakePad("⤴",160,10,"U")
 MakePad("⤵",160,90,"D")
 
@@ -101,24 +106,24 @@ MakePad("⤵",160,90,"D")
 ------------------------------------------------
 local function StartFly()
 
-    local char=Player.Character
+    local char = Player.Character
     if not char then return end
 
-    local hrp=char:WaitForChild("HumanoidRootPart")
+    local hrp = char:WaitForChild("HumanoidRootPart")
 
-    bv=Instance.new("BodyVelocity",hrp)
-    bv.MaxForce=Vector3.new(1e5,1e5,1e5)
+    bv = Instance.new("BodyVelocity",hrp)
+    bv.MaxForce = Vector3.new(1e5,1e5,1e5)
 
-    bg=Instance.new("BodyGyro",hrp)
-    bg.MaxTorque=Vector3.new(1e5,1e5,1e5)
-    bg.P=9e4
+    bg = Instance.new("BodyGyro",hrp)
+    bg.MaxTorque = Vector3.new(1e5,1e5,1e5)
+    bg.P = 9e4
 
     RunService:BindToRenderStep("FlyMove",200,function()
 
         if not flying then return end
 
-        local cam=workspace.CurrentCamera
-        local v=Vector3.zero
+        local cam = workspace.CurrentCamera
+        local v = Vector3.zero
 
         if dir.F then v+=cam.CFrame.LookVector end
         if dir.B then v-=cam.CFrame.LookVector end
@@ -190,12 +195,12 @@ local normal=16
 local fast=80
 
 ------------------------------------------------
--- Clone Camera (FIXED)
+-- Clone Camera (Follow)
 ------------------------------------------------
 local cloneOn=false
 local cloneChar=nil
 local followConn=nil
-local oldSubject=nil
+local oldCam=nil
 
 local function SetCloneCam(on)
 
@@ -204,9 +209,10 @@ local function SetCloneCam(on)
     if not char then return end
 
     if on then
+
         if cloneChar then return end
 
-        oldSubject=cam.CameraSubject
+        oldCam=cam.CameraSubject
 
         cloneChar=char:Clone()
         cloneChar.Name="FollowClone"
@@ -222,30 +228,28 @@ local function SetCloneCam(on)
             end
         end
 
-        local hum=cloneChar:FindFirstChildOfClass("Humanoid")
-        if hum then
-            cam.CameraSubject=hum
+        local hrp=cloneChar:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            cam.CameraSubject=hrp
         end
 
         followConn=RunService.RenderStepped:Connect(function()
 
             if not cloneOn then return end
 
-            if Player.Character
-            and cloneChar
-            and Player.Character:FindFirstChild("HumanoidRootPart")
-            and cloneChar:FindFirstChild("HumanoidRootPart") then
+            if Player.Character and cloneChar and
+               Player.Character:FindFirstChild("HumanoidRootPart") and
+               cloneChar:FindFirstChild("HumanoidRootPart") then
 
-                cloneChar:SetPrimaryPartCFrame(
+                cloneChar.HumanoidRootPart.CFrame =
                     Player.Character.HumanoidRootPart.CFrame
-                )
             end
         end)
 
     else
 
-        if oldSubject then
-            cam.CameraSubject=oldSubject
+        if oldCam then
+            cam.CameraSubject=oldCam
         end
 
         if followConn then
@@ -261,7 +265,7 @@ local function SetCloneCam(on)
 end
 
 ------------------------------------------------
--- ESP
+-- ESP System
 ------------------------------------------------
 local espOn=false
 local espCache={}
@@ -310,12 +314,35 @@ local function SetESP(on)
     end
 end
 
+Players.PlayerAdded:Connect(function(p)
+    if espOn then AddESP(p) end
+end)
+
+Players.PlayerRemoving:Connect(function(p)
+    if espCache[p] then
+        espCache[p]:Destroy()
+        espCache[p]=nil
+    end
+end)
+
 ------------------------------------------------
--- Teleport
+-- Teleport Menu
 ------------------------------------------------
+local tpFrame=nil
+local tpOpen=false
+
 local function ToggleTP()
 
-    local tpFrame=Instance.new("Frame",gui)
+    tpOpen=not tpOpen
+
+    if not tpOpen then
+        if tpFrame then tpFrame:Destroy() end
+        return
+    end
+
+    if tpFrame then tpFrame:Destroy() end
+
+    tpFrame=Instance.new("Frame",gui)
     tpFrame.Size=UDim2.new(0,200,0,250)
     tpFrame.Position=UDim2.new(0.4,0,0.25,0)
     tpFrame.BackgroundColor3=Color3.fromRGB(40,40,40)
@@ -323,13 +350,21 @@ local function ToggleTP()
     tpFrame.Draggable=true
     Instance.new("UICorner",tpFrame)
 
+    local t=Instance.new("TextLabel",tpFrame)
+    t.Size=UDim2.new(1,0,0,30)
+    t.BackgroundTransparency=1
+    t.Text="Teleport Players"
+    t.TextColor3=Color3.new(1,1,1)
+    t.TextSize=14
+
     local scroll=Instance.new("ScrollingFrame",tpFrame)
-    scroll.Size=UDim2.new(1,-10,1,-10)
-    scroll.Position=UDim2.new(0,5,0,5)
+    scroll.Size=UDim2.new(1,-10,1,-40)
+    scroll.Position=UDim2.new(0,5,0,35)
     scroll.CanvasSize=UDim2.new(0,0,0,0)
     scroll.BackgroundTransparency=1
 
     local layout=Instance.new("UIListLayout",scroll)
+    layout.Padding=UDim.new(0,5)
 
     for _,p in pairs(Players:GetPlayers()) do
 
@@ -345,20 +380,27 @@ local function ToggleTP()
 
             b.MouseButton1Click:Connect(function()
 
-                if Player.Character and p.Character then
+                if Player.Character and p.Character and
+                   Player.Character:FindFirstChild("HumanoidRootPart") and
+                   p.Character:FindFirstChild("HumanoidRootPart") then
 
                     Player.Character.HumanoidRootPart.CFrame =
-                        p.Character.HumanoidRootPart.CFrame*CFrame.new(0,0,2)
+                        p.Character.HumanoidRootPart.CFrame * CFrame.new(0,0,2)
                 end
             end)
         end
     end
+
+    layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        scroll.CanvasSize=UDim2.new(0,0,0,layout.AbsoluteContentSize.Y+5)
+    end)
 end
 
 ------------------------------------------------
 -- Buttons
 ------------------------------------------------
-local flyBtn=MakeBtn("Fly : OFF",35,function()
+local flyBtn
+flyBtn=MakeBtn("Fly : OFF",35,function()
 
     flying=not flying
 
@@ -371,7 +413,8 @@ local flyBtn=MakeBtn("Fly : OFF",35,function()
     end
 end)
 
-local nocBtn=MakeBtn("NoClip : OFF",70,function()
+local nocBtn
+nocBtn=MakeBtn("NoClip : OFF",70,function()
 
     noclip=not noclip
     nocBtn.Text="NoClip : "..(noclip and "ON" or "OFF")
@@ -379,7 +422,8 @@ local nocBtn=MakeBtn("NoClip : OFF",70,function()
     SetNoClip(noclip)
 end)
 
-local speedBtn=MakeBtn("Speed : OFF",105,function()
+local speedBtn
+speedBtn=MakeBtn("Speed : OFF",105,function()
 
     speedOn=not speedOn
 
@@ -405,7 +449,8 @@ MakeBtn("Jump",140,function()
     end
 end)
 
-local cloneBtn=MakeBtn("CloneCam : OFF",175,function()
+local cloneBtn
+cloneBtn=MakeBtn("CloneCam : OFF",175,function()
 
     cloneOn=not cloneOn
 
@@ -418,11 +463,13 @@ local cloneBtn=MakeBtn("CloneCam : OFF",175,function()
     end
 end)
 
-MakeBtn("Teleport",210,function()
+local tpBtn
+tpBtn=MakeBtn("Teleport",210,function()
     ToggleTP()
 end)
 
-local espBtn=MakeBtn("ESP : OFF",245,function()
+local espBtn
+espBtn=MakeBtn("ESP : OFF",245,function()
 
     espOn=not espOn
     espBtn.Text="ESP : "..(espOn and "ON" or "OFF")
