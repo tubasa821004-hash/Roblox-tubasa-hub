@@ -1,180 +1,145 @@
--- Simple All In One Hub
--- By You
+-- Delta Mini Hub
+-- Fly Toggle Version
 
-local Player = game.Players.LocalPlayer
+local Players = game:GetService("Players")
 local UIS = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 
--- GUI
-local ScreenGui = Instance.new("ScreenGui")
-local Frame = Instance.new("Frame")
-ScreenGui.Parent = game.CoreGui
+local Player = Players.LocalPlayer
 
-Frame.Parent = ScreenGui
-Frame.Size = UDim2.new(0,300,0,400)
-Frame.Position = UDim2.new(0.05,0,0.2,0)
-Frame.BackgroundColor3 = Color3.fromRGB(30,30,30)
-Frame.Active = true
-Frame.Draggable = true
+------------------------------------------------
+-- GUI (Small Size)
+------------------------------------------------
 
--- Create Button
-function MakeButton(text,posY,func)
-    local btn = Instance.new("TextButton",Frame)
-    btn.Size = UDim2.new(0,260,0,40)
-    btn.Position = UDim2.new(0,20,0,posY)
+local gui = Instance.new("ScreenGui")
+gui.Name = "TsubasaHub"
+gui.ResetOnSpawn = false
+gui.Parent = Player:WaitForChild("PlayerGui")
+
+local frame = Instance.new("Frame", gui)
+frame.Size = UDim2.new(0,180,0,220) -- 小さめ
+frame.Position = UDim2.new(0.05,0,0.25,0)
+frame.BackgroundColor3 = Color3.fromRGB(35,35,35)
+frame.BorderSizePixel = 0
+frame.Active = true
+frame.Draggable = true
+
+local corner = Instance.new("UICorner", frame)
+corner.CornerRadius = UDim.new(0,10)
+
+------------------------------------------------
+-- Title
+------------------------------------------------
+
+local title = Instance.new("TextLabel", frame)
+title.Size = UDim2.new(1,0,0,30)
+title.Text = "Tsubasa Hub"
+title.BackgroundTransparency = 1
+title.TextColor3 = Color3.fromRGB(255,255,255)
+title.Font = Enum.Font.SourceSansBold
+title.TextSize = 16
+
+------------------------------------------------
+-- Button Maker
+------------------------------------------------
+
+local function MakeBtn(text, y, func)
+    local btn = Instance.new("TextButton", frame)
+
+    btn.Size = UDim2.new(0,150,0,28)
+    btn.Position = UDim2.new(0,15,0,y)
+
     btn.Text = text
     btn.BackgroundColor3 = Color3.fromRGB(60,60,60)
     btn.TextColor3 = Color3.new(1,1,1)
 
+    btn.Font = Enum.Font.SourceSans
+    btn.TextSize = 14
+    btn.BorderSizePixel = 0
+
+    local c = Instance.new("UICorner", btn)
+    c.CornerRadius = UDim.new(0,6)
+
     btn.MouseButton1Click:Connect(func)
+
+    return btn
 end
 
---------------------------------
--- Variables
---------------------------------
+------------------------------------------------
+-- Fly System (Toggle)
+------------------------------------------------
 
-local Flying = false
-local SpeedOn = false
-local God = false
+local flying = false
+local bv, bg
+local flySpeed = 50
 
---------------------------------
--- Fly
---------------------------------
-
-function Fly()
+local function StartFly()
     local char = Player.Character
+    if not char then return end
+
     local hrp = char:WaitForChild("HumanoidRootPart")
 
-    local bv = Instance.new("BodyVelocity",hrp)
-    local bg = Instance.new("BodyGyro",hrp)
+    bv = Instance.new("BodyVelocity")
+    bv.MaxForce = Vector3.new(9e4,9e4,9e4)
+    bv.Velocity = Vector3.zero
+    bv.Parent = hrp
 
-    bv.MaxForce = Vector3.new(1e5,1e5,1e5)
-    bg.MaxTorque = Vector3.new(1e5,1e5,1e5)
+    bg = Instance.new("BodyGyro")
+    bg.MaxTorque = Vector3.new(9e4,9e4,9e4)
+    bg.CFrame = hrp.CFrame
+    bg.Parent = hrp
 
-    Flying = true
+    RunService:BindToRenderStep("Fly", 200, function()
+        if not flying then return end
 
-    RunService.RenderStepped:Connect(function()
-        if not Flying then
-            bv:Destroy()
-            bg:Destroy()
-            return
-        end
-
-        bv.Velocity = workspace.CurrentCamera.CFrame.LookVector * 60
-        bg.CFrame = workspace.CurrentCamera.CFrame
+        local cam = workspace.CurrentCamera
+        bv.Velocity = cam.CFrame.LookVector * flySpeed
+        bg.CFrame = cam.CFrame
     end)
 end
 
---------------------------------
--- Speed
---------------------------------
+local function StopFly()
+    flying = false
 
-function ToggleSpeed()
-    SpeedOn = not SpeedOn
+    RunService:UnbindFromRenderStep("Fly")
 
-    if SpeedOn then
-        Player.Character.Humanoid.WalkSpeed = 80
-    else
-        Player.Character.Humanoid.WalkSpeed = 16
-    end
+    if bv then bv:Destroy() end
+    if bg then bg:Destroy() end
 end
 
---------------------------------
--- Fling
---------------------------------
-
-function FlingAll()
-    local hrp = Player.Character.HumanoidRootPart
-
-    for i,v in pairs(game.Players:GetPlayers()) do
-        if v ~= Player then
-            local thrp = v.Character:FindFirstChild("HumanoidRootPart")
-            if thrp then
-                hrp.CFrame = thrp.CFrame
-                hrp.Velocity = Vector3.new(9999,9999,9999)
-                wait(0.2)
-            end
-        end
-    end
-end
-
---------------------------------
--- ESP
---------------------------------
-
-function ESP()
-    for i,v in pairs(game.Players:GetPlayers()) do
-        if v ~= Player then
-            local box = Instance.new("BoxHandleAdornment")
-            box.Size = v.Character.HumanoidRootPart.Size
-            box.Adornee = v.Character.HumanoidRootPart
-            box.AlwaysOnTop = true
-            box.ZIndex = 5
-            box.Color3 = Color3.new(1,0,0)
-            box.Transparency = 0.4
-            box.Parent = v.Character
-        end
-    end
-end
-
---------------------------------
--- AutoFarm (Example)
---------------------------------
-
-function AutoFarm()
-    while true do
-        wait(1)
-
-        for i,v in pairs(workspace:GetDescendants()) do
-            if v.Name == "Coin" then
-                Player.Character.HumanoidRootPart.CFrame = v.CFrame
-            end
-        end
-    end
-end
-
---------------------------------
--- Teleport
---------------------------------
-
-function TeleportRandom()
-    local map = workspace:GetDescendants()
-
-    for i,v in pairs(map) do
-        if v:IsA("SpawnLocation") then
-            Player.Character.HumanoidRootPart.CFrame = v.CFrame
-            break
-        end
-    end
-end
-
---------------------------------
--- GodMode
---------------------------------
-
-function GodMode()
-    God = not God
-
-    if God then
-        Player.Character.Humanoid.MaxHealth = math.huge
-        Player.Character.Humanoid.Health = math.huge
-    else
-        Player.Character.Humanoid.MaxHealth = 100
-        Player.Character.Humanoid.Health = 100
-    end
-end
-
---------------------------------
+------------------------------------------------
 -- Buttons
---------------------------------
+------------------------------------------------
 
-MakeButton("Fly",20,Fly)
-MakeButton("Speed",70,ToggleSpeed)
-MakeButton("Fling All",120,FlingAll)
-MakeButton("ESP",170,ESP)
-MakeButton("AutoFarm",220,AutoFarm)
-MakeButton("Teleport",270,TeleportRandom)
-MakeButton("GodMode",320,GodMode)
-MakeButton("Close",370,function()
-    ScreenGui:Destroy()
+local flyBtn
+flyBtn = MakeBtn("Fly : OFF", 40, function()
+
+    flying = not flying
+
+    if flying then
+        flyBtn.Text = "Fly : ON"
+        StartFly()
+    else
+        flyBtn.Text = "Fly : OFF"
+        StopFly()
+    end
+
+end)
+
+MakeBtn("Speed", 80, function()
+    local hum = Player.Character:FindFirstChild("Humanoid")
+    if hum then
+        hum.WalkSpeed = 80
+    end
+end)
+
+MakeBtn("Jump", 120, function()
+    local hum = Player.Character:FindFirstChild("Humanoid")
+    if hum then
+        hum.JumpPower = 150
+    end
+end)
+
+MakeBtn("Close", 170, function()
+    gui:Destroy()
 end)
