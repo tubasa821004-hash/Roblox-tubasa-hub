@@ -1,4 +1,4 @@
--- Tsubasa Hub - Fixed Edition (Delta/Mobile)
+-- Tsubasa Hub - Joystick Fly Edition (Delta/Mobile)
 
 local Players = game:GetService("Players")
 local UIS = game:GetService("UserInputService")
@@ -10,11 +10,11 @@ local Player = Players.LocalPlayer
 -- GUI
 ------------------------------------------------
 local gui = Instance.new("ScreenGui", Player.PlayerGui)
-gui.Name="TsubasaHub"
-gui.ResetOnSpawn=false
+gui.Name = "TsubasaHub"
+gui.ResetOnSpawn = false
 
 local frame = Instance.new("Frame", gui)
-frame.Size = UDim2.new(0,185,0,350)
+frame.Size = UDim2.new(0,185,0,300)
 frame.Position = UDim2.new(0.05,0,0.22,0)
 frame.BackgroundColor3 = Color3.fromRGB(35,35,35)
 frame.BorderSizePixel = 0
@@ -50,151 +50,168 @@ local function MakeBtn(text,y,func)
 end
 
 ------------------------------------------------
--- Fly + Controller
+-- Fly System
 ------------------------------------------------
-local flying=false
-local flySpeed=65
+local flying = false
+local flySpeed = 65
 
-local dir={F=false,B=false,L=false,R=false,U=false,D=false}
+local moveVec = Vector2.zero
+local up = false
+local down = false
+
 local bv,bg
 
--- Controller (上に移動済み)
-local controller=Instance.new("Frame",gui)
-controller.Size=UDim2.new(0,220,0,140)
-controller.Position=UDim2.new(0.25,0,0.6,0) -- ← 上に変更
-controller.BackgroundTransparency=1
-controller.Visible=false
+------------------------------------------------
+-- Joystick UI
+------------------------------------------------
+local joyBase = Instance.new("Frame", gui)
+joyBase.Size = UDim2.new(0,120,0,120)
+joyBase.Position = UDim2.new(0.05,0,0.6,0)
+joyBase.BackgroundColor3 = Color3.fromRGB(60,60,60)
+joyBase.BackgroundTransparency = 0.3
+joyBase.Visible = false
+Instance.new("UICorner", joyBase).CornerRadius = UDim.new(1,0)
 
-local function Pad(txt,x,y,key)
+local joyStick = Instance.new("Frame", joyBase)
+joyStick.Size = UDim2.new(0,40,0,40)
+joyStick.Position = UDim2.new(0.5,-20,0.5,-20)
+joyStick.BackgroundColor3 = Color3.fromRGB(200,200,200)
+Instance.new("UICorner", joyStick).CornerRadius = UDim.new(1,0)
 
-    local b=Instance.new("TextButton",controller)
-    b.Size=UDim2.new(0,40,0,40)
-    b.Position=UDim2.new(0,x,0,y)
-    b.Text=txt
-    b.TextSize=22
-    b.BackgroundColor3=Color3.fromRGB(70,70,70)
-    b.TextColor3=Color3.new(1,1,1)
-    b.BorderSizePixel=0
-    Instance.new("UICorner",b)
+------------------------------------------------
+-- Up / Down Buttons
+------------------------------------------------
+local function MakeUD(text,y,flag)
+
+    local b = Instance.new("TextButton", gui)
+    b.Size = UDim2.new(0,50,0,50)
+    b.Position = UDim2.new(0.85,-55,y,0)
+    b.Text = text
+    b.TextSize = 28
+    b.BackgroundColor3 = Color3.fromRGB(60,60,60)
+    b.TextColor3 = Color3.new(1,1,1)
+    b.Visible = false
+    Instance.new("UICorner", b)
 
     b.MouseButton1Down:Connect(function()
-        dir[key]=true
+        if flag=="up" then up=true else down=true end
     end)
 
     b.MouseButton1Up:Connect(function()
-        dir[key]=false
+        if flag=="up" then up=false else down=false end
     end)
+
+    return b
 end
 
-Pad("↑",50,0,"F")
-Pad("↓",50,80,"B")
-Pad("←",0,40,"L")
-Pad("→",100,40,"R")
-Pad("⤴",160,10,"U")
-Pad("⤵",160,70,"D")
+local upBtn = MakeUD("⬆",0.55,"up")
+local downBtn = MakeUD("⬇",0.7,"down")
 
+------------------------------------------------
+-- Joystick Control
+------------------------------------------------
+local dragging = false
+
+joyBase.InputBegan:Connect(function(i)
+    if i.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+    end
+end)
+
+joyBase.InputEnded:Connect(function(i)
+    if i.UserInputType == Enum.UserInputType.Touch then
+        dragging = false
+        joyStick.Position = UDim2.new(0.5,-20,0.5,-20)
+        moveVec = Vector2.zero
+    end
+end)
+
+joyBase.InputChanged:Connect(function(i)
+
+    if dragging and i.UserInputType == Enum.UserInputType.Touch then
+
+        local pos = (i.Position - joyBase.AbsolutePosition)
+        local center = joyBase.AbsoluteSize/2
+
+        local offset = pos - center
+        local radius = joyBase.AbsoluteSize.X/2
+
+        offset = Vector2.new(
+            math.clamp(offset.X,-radius,radius),
+            math.clamp(offset.Y,-radius,radius)
+        )
+
+        joyStick.Position = UDim2.new(
+            0.5, offset.X-20,
+            0.5, offset.Y-20
+        )
+
+        moveVec = offset / radius
+    end
+end)
+
+------------------------------------------------
+-- Fly Logic
+------------------------------------------------
 local function StartFly()
 
-    local char=Player.Character
+    local char = Player.Character
     if not char then return end
-    local hrp=char:WaitForChild("HumanoidRootPart")
 
-    bv=Instance.new("BodyVelocity",hrp)
-    bv.MaxForce=Vector3.new(1e5,1e5,1e5)
+    local hrp = char:WaitForChild("HumanoidRootPart")
 
-    bg=Instance.new("BodyGyro",hrp)
-    bg.MaxTorque=Vector3.new(1e5,1e5,1e5)
-    bg.P=9e4
+    bv = Instance.new("BodyVelocity", hrp)
+    bv.MaxForce = Vector3.new(1e5,1e5,1e5)
+
+    bg = Instance.new("BodyGyro", hrp)
+    bg.MaxTorque = Vector3.new(1e5,1e5,1e5)
+    bg.P = 9e4
 
     RunService:BindToRenderStep("FlyMove",200,function()
 
         if not flying then return end
 
-        local cam=workspace.CurrentCamera
-        local v=Vector3.zero
+        local cam = workspace.CurrentCamera
+        local v = Vector3.zero
 
-        if dir.F then v+=cam.CFrame.LookVector end
-        if dir.B then v-=cam.CFrame.LookVector end
-        if dir.L then v-=cam.CFrame.RightVector end
-        if dir.R then v+=cam.CFrame.RightVector end
-        if dir.U then v+=cam.CFrame.UpVector end
-        if dir.D then v-=cam.CFrame.UpVector end
+        v += cam.CFrame.LookVector * -moveVec.Y
+        v += cam.CFrame.RightVector * moveVec.X
 
-        if v.Magnitude>0 then
-            v=v.Unit*flySpeed
+        if up then v += cam.CFrame.UpVector end
+        if down then v -= cam.CFrame.UpVector end
+
+        if v.Magnitude > 0 then
+            v = v.Unit * flySpeed
         end
 
-        bv.Velocity=v
-        bg.CFrame=cam.CFrame
+        bv.Velocity = v
+        bg.CFrame = cam.CFrame
     end)
 
     if UIS.TouchEnabled then
-        controller.Visible=true
+        joyBase.Visible = true
+        upBtn.Visible = true
+        downBtn.Visible = true
     end
 end
 
 local function StopFly()
 
-    flying=false
+    flying = false
     RunService:UnbindFromRenderStep("FlyMove")
 
     if bv then bv:Destroy() end
     if bg then bg:Destroy() end
 
-    controller.Visible=false
+    joyBase.Visible = false
+    upBtn.Visible = false
+    downBtn.Visible = false
 end
 
 ------------------------------------------------
--- Invisible (強化版)
-------------------------------------------------
-local invisible=false
-local saved={}
-
-local function SetInvisible(on)
-
-    local char=Player.Character
-    if not char then return end
-
-    if on then
-
-        saved={}
-
-        for _,v in pairs(char:GetDescendants()) do
-
-            if v:IsA("BasePart") then
-                saved[v]={v.Transparency,v.CanCollide}
-                v.Transparency=1
-                v.CanCollide=false
-            end
-
-            if v:IsA("Decal") then
-                saved[v]=v.Transparency
-                v.Transparency=1
-            end
-        end
-
-    else
-
-        for p,val in pairs(saved) do
-
-            if p and p.Parent then
-
-                if typeof(val)=="table" then
-                    p.Transparency=val[1]
-                    p.CanCollide=val[2]
-                else
-                    p.Transparency=val
-                end
-            end
-        end
-
-        saved={}
-    end
-end
-
+-- Other Systems
 ------------------------------------------------
 -- NoClip
-------------------------------------------------
 local noclip=false
 local noclipConn
 
@@ -206,7 +223,6 @@ local function SetNoClip(on)
     if on then
 
         noclipConn=RunService.Stepped:Connect(function()
-
             for _,v in pairs(char:GetDescendants()) do
                 if v:IsA("BasePart") then
                     v.CanCollide=false
@@ -216,9 +232,7 @@ local function SetNoClip(on)
 
     else
 
-        if noclipConn then
-            noclipConn:Disconnect()
-        end
+        if noclipConn then noclipConn:Disconnect() end
 
         for _,v in pairs(char:GetDescendants()) do
             if v:IsA("BasePart") then
@@ -228,45 +242,18 @@ local function SetNoClip(on)
     end
 end
 
-------------------------------------------------
--- ESP
-------------------------------------------------
-local esp=false
-local espFolder=Instance.new("Folder",gui)
-
-local function SetESP(on)
-
-    espFolder:ClearAllChildren()
-
-    if on then
-
-        for _,p in pairs(Players:GetPlayers()) do
-
-            if p~=Player and p.Character then
-
-                local h=Instance.new("Highlight",espFolder)
-                h.Adornee=p.Character
-                h.FillColor=Color3.fromRGB(255,60,60)
-                h.FillTransparency=0.5
-            end
-        end
-    end
-end
-
-------------------------------------------------
--- Speed Toggle
-------------------------------------------------
+-- Speed
 local speed=false
-local normalSpeed=16
-local fastSpeed=80
+local normal=16
+local fast=80
 
 ------------------------------------------------
 -- Buttons
 ------------------------------------------------
 local flyBtn
-flyBtn=MakeBtn("Fly : OFF",35,function()
+flyBtn = MakeBtn("Fly : OFF",35,function()
 
-    flying=not flying
+    flying = not flying
 
     if flying then
         flyBtn.Text="Fly : ON"
@@ -277,66 +264,45 @@ flyBtn=MakeBtn("Fly : OFF",35,function()
     end
 end)
 
-local invBtn
-invBtn=MakeBtn("Invisible : OFF",70,function()
-
-    invisible=not invisible
-    invBtn.Text="Invisible : "..(invisible and "ON" or "OFF")
-
-    SetInvisible(invisible)
-end)
-
 local nocBtn
-nocBtn=MakeBtn("NoClip : OFF",105,function()
+nocBtn = MakeBtn("NoClip : OFF",70,function()
 
-    noclip=not noclip
+    noclip = not noclip
     nocBtn.Text="NoClip : "..(noclip and "ON" or "OFF")
 
     SetNoClip(noclip)
 end)
 
-local espBtn
-espBtn=MakeBtn("ESP : OFF",140,function()
-
-    esp=not esp
-    espBtn.Text="ESP : "..(esp and "ON" or "OFF")
-
-    SetESP(esp)
-end)
-
 local speedBtn
-speedBtn=MakeBtn("Speed : OFF",175,function()
+speedBtn = MakeBtn("Speed : OFF",105,function()
 
-    speed=not speed
+    speed = not speed
 
-    local h=Player.Character and Player.Character:FindFirstChild("Humanoid")
+    local h = Player.Character and Player.Character:FindFirstChildOfClass("Humanoid")
 
     if h then
         if speed then
-            h.WalkSpeed=fastSpeed
+            h.WalkSpeed = fast
             speedBtn.Text="Speed : ON"
         else
-            h.WalkSpeed=normalSpeed
+            h.WalkSpeed = normal
             speedBtn.Text="Speed : OFF"
         end
     end
 end)
 
-MakeBtn("Jump",210,function()
+MakeBtn("Jump",140,function()
 
-    local h=Player.Character and Player.Character:FindFirstChild("Humanoid")
+    local h = Player.Character and Player.Character:FindFirstChild("Humanoid")
 
     if h then
         h:ChangeState(Enum.HumanoidStateType.Jumping)
     end
 end)
 
-MakeBtn("Close",260,function()
+MakeBtn("Close",190,function()
 
     StopFly()
-    SetInvisible(false)
     SetNoClip(false)
-    SetESP(false)
-
     gui:Destroy()
 end)
