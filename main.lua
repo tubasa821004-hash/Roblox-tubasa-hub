@@ -1,4 +1,4 @@
--- Tsubasa Hub Ultimate (Key + Toggle Full)
+-- Tsubasa Hub Ultimate FULL (Key + Toggle + All Features)
 
 local Players = game:GetService("Players")
 local UIS = game:GetService("UserInputService")
@@ -9,7 +9,7 @@ local Player = Players.LocalPlayer
 ------------------------------------------------
 -- CONFIG
 ------------------------------------------------
-local CORRECT_KEY = "tubasa82"
+local KEY = "tubasa82"
 local TOGGLE_KEY = Enum.KeyCode.K
 
 ------------------------------------------------
@@ -58,7 +58,7 @@ keyBtn.TextColor3 = Color3.new(1,1,1)
 Instance.new("UICorner", keyBtn)
 
 ------------------------------------------------
--- MAIN GUI (Hidden)
+-- MAIN GUI
 ------------------------------------------------
 local gui = Instance.new("ScreenGui", Player.PlayerGui)
 gui.Name = "TsubasaHub"
@@ -66,18 +66,16 @@ gui.Enabled = false
 gui.ResetOnSpawn = false
 
 ------------------------------------------------
--- LOGIN CHECK
+-- LOGIN
 ------------------------------------------------
-local loggedIn = false
+local logged = false
 
 keyBtn.MouseButton1Click:Connect(function()
 
-	if keyBox.Text == CORRECT_KEY then
-
-		loggedIn = true
+	if keyBox.Text == KEY then
+		logged = true
 		keyGui:Destroy()
 		gui.Enabled = true
-
 	else
 		keyStatus.Text = "Wrong Key!"
 		keyBox.Text = ""
@@ -85,20 +83,18 @@ keyBtn.MouseButton1Click:Connect(function()
 end)
 
 ------------------------------------------------
--- MENU TOGGLE (K)
+-- TOGGLE (K)
 ------------------------------------------------
 local menuOpen = true
 
 UIS.InputBegan:Connect(function(input,gp)
 
 	if gp then return end
-	if not loggedIn then return end
+	if not logged then return end
 
 	if input.KeyCode == TOGGLE_KEY then
-
 		menuOpen = not menuOpen
 		gui.Enabled = menuOpen
-
 	end
 end)
 
@@ -226,10 +222,194 @@ local function StopFly()
 end
 
 ------------------------------------------------
+-- NOCLIP
+------------------------------------------------
+local noclip=false
+local noclipConn
+
+local function SetNoClip(on)
+
+	local c=Player.Character
+	if not c then return end
+
+	if on then
+
+		noclipConn=RunService.Stepped:Connect(function()
+
+			for _,v in pairs(c:GetDescendants()) do
+				if v:IsA("BasePart") then
+					v.CanCollide=false
+				end
+			end
+		end)
+
+	else
+
+		if noclipConn then noclipConn:Disconnect() end
+
+		for _,v in pairs(c:GetDescendants()) do
+			if v:IsA("BasePart") then
+				v.CanCollide=true
+			end
+		end
+	end
+end
+
+------------------------------------------------
+-- SPEED
+------------------------------------------------
+local speedOn=false
+local normal=16
+local fast=80
+
+------------------------------------------------
+-- CLONE CAM
+------------------------------------------------
+local cloneOn=false
+local cloneChar=nil
+local followConn=nil
+local oldCam=nil
+
+local function SetClone(on)
+
+	local cam=workspace.CurrentCamera
+	local c=Player.Character
+	if not c then return end
+
+	if on then
+
+		oldCam=cam.CameraSubject
+
+		cloneChar=c:Clone()
+		cloneChar.Parent=workspace
+
+		for _,v in pairs(cloneChar:GetDescendants()) do
+			if v:IsA("BasePart") then
+				v.Transparency=1
+				v.Anchored=true
+				v.CanCollide=false
+			end
+		end
+
+		cam.CameraSubject=cloneChar.HumanoidRootPart
+
+		followConn=RunService.RenderStepped:Connect(function()
+
+			if cloneOn and c and cloneChar then
+				cloneChar.HumanoidRootPart.CFrame=
+					c.HumanoidRootPart.CFrame
+			end
+		end)
+
+	else
+
+		if oldCam then cam.CameraSubject=oldCam end
+		if followConn then followConn:Disconnect() end
+		if cloneChar then cloneChar:Destroy() end
+	end
+end
+
+------------------------------------------------
+-- ESP
+------------------------------------------------
+local espOn=false
+local espCache={}
+
+local function AddESP(p)
+
+	if p==Player or espCache[p] then return end
+
+	local function Apply(char)
+
+		if not espOn then return end
+
+		local h=Instance.new("Highlight")
+		h.FillColor=Color3.fromRGB(255,80,80)
+		h.OutlineColor=Color3.new(1,1,1)
+		h.Adornee=char
+		h.Parent=char
+
+		espCache[p]=h
+	end
+
+	if p.Character then Apply(p.Character) end
+	p.CharacterAdded:Connect(Apply)
+end
+
+local function SetESP(on)
+
+	espOn=on
+
+	if on then
+		for _,p in pairs(Players:GetPlayers()) do
+			AddESP(p)
+		end
+	else
+		for _,v in pairs(espCache) do
+			if v then v:Destroy() end
+		end
+		espCache={}
+	end
+end
+
+------------------------------------------------
+-- TELEPORT
+------------------------------------------------
+local tpFrame=nil
+local tpOpen=false
+
+local function ToggleTP()
+
+	tpOpen=not tpOpen
+
+	if not tpOpen then
+		if tpFrame then tpFrame:Destroy() end
+		return
+	end
+
+	if tpFrame then tpFrame:Destroy() end
+
+	tpFrame=Instance.new("Frame",gui)
+	tpFrame.Size=UDim2.new(0,200,0,250)
+	tpFrame.Position=UDim2.new(0.4,0,0.25,0)
+	tpFrame.BackgroundColor3=Color3.fromRGB(40,40,40)
+	tpFrame.Active=true
+	tpFrame.Draggable=true
+	Instance.new("UICorner",tpFrame)
+
+	local scroll=Instance.new("ScrollingFrame",tpFrame)
+	scroll.Size=UDim2.new(1,-10,1,-10)
+	scroll.Position=UDim2.new(0,5,0,5)
+	scroll.BackgroundTransparency=1
+
+	local layout=Instance.new("UIListLayout",scroll)
+
+	for _,p in pairs(Players:GetPlayers()) do
+
+		if p~=Player then
+
+			local b=Instance.new("TextButton",scroll)
+			b.Size=UDim2.new(1,0,0,28)
+			b.Text=p.Name
+			b.BackgroundColor3=Color3.fromRGB(65,65,65)
+			b.TextColor3=Color3.new(1,1,1)
+			Instance.new("UICorner",b)
+
+			b.MouseButton1Click:Connect(function()
+
+				if Player.Character and p.Character then
+					Player.Character.HumanoidRootPart.CFrame=
+						p.Character.HumanoidRootPart.CFrame
+				end
+			end)
+		end
+	end
+end
+
+------------------------------------------------
 -- BUTTONS
 ------------------------------------------------
-local flyBtn
-flyBtn=MakeBtn("Fly : OFF",35,function()
+local flyBtn=MakeBtn("Fly : OFF",35,function()
 
 	flying=not flying
 
@@ -242,7 +422,62 @@ flyBtn=MakeBtn("Fly : OFF",35,function()
 	end
 end)
 
+local nocBtn=MakeBtn("NoClip : OFF",70,function()
+
+	noclip=not noclip
+	nocBtn.Text="NoClip : "..(noclip and "ON" or "OFF")
+
+	SetNoClip(noclip)
+end)
+
+local speedBtn=MakeBtn("Speed : OFF",105,function()
+
+	speedOn=not speedOn
+
+	local h=Player.Character and Player.Character:FindFirstChild("Humanoid")
+
+	if h then
+		if speedOn then
+			h.WalkSpeed=fast
+			speedBtn.Text="Speed : ON"
+		else
+			h.WalkSpeed=normal
+			speedBtn.Text="Speed : OFF"
+		end
+	end
+end)
+
+MakeBtn("Jump",140,function()
+
+	local h=Player.Character and Player.Character:FindFirstChild("Humanoid")
+	if h then h:ChangeState(Enum.HumanoidStateType.Jumping) end
+end)
+
+local cloneBtn=MakeBtn("CloneCam : OFF",175,function()
+
+	cloneOn=not cloneOn
+	cloneBtn.Text="CloneCam : "..(cloneOn and "ON" or "OFF")
+	SetClone(cloneOn)
+end)
+
+MakeBtn("Teleport",210,function()
+	ToggleTP()
+end)
+
+local espBtn=MakeBtn("ESP : OFF",245,function()
+
+	espOn=not espOn
+	espBtn.Text="ESP : "..(espOn and "ON" or "OFF")
+
+	SetESP(espOn)
+end)
+
 MakeBtn("Close",300,function()
+
 	StopFly()
+	SetNoClip(false)
+	SetClone(false)
+	SetESP(false)
+
 	gui.Enabled=false
 end)
