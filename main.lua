@@ -1,132 +1,48 @@
--- Tsubasa Hub Mobile + PC Compatible
+-- Tsubasa Hub Ultimate Mobile Stable
 
 local Players = game:GetService("Players")
-local UIS = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
+local UIS = game:GetService("UserInputService")
 
 local Player = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 
 ------------------------------------------------
--- CONFIG
+-- UI
 ------------------------------------------------
-local KEY = "tubasa82"
-local TOGGLE_KEY = Enum.KeyCode.K
-local FLY_SPEED = 60
-
-------------------------------------------------
--- LOGIN GUI
-------------------------------------------------
-local keyGui = Instance.new("ScreenGui", Player.PlayerGui)
-
-local keyFrame = Instance.new("Frame", keyGui)
-keyFrame.Size = UDim2.new(0,260,0,170)
-keyFrame.Position = UDim2.new(0.5,-130,0.5,-85)
-keyFrame.BackgroundColor3 = Color3.fromRGB(25,25,25)
-keyFrame.Active = true
-keyFrame.Draggable = true
-Instance.new("UICorner",keyFrame)
-
-local keyTitle = Instance.new("TextLabel", keyFrame)
-keyTitle.Size = UDim2.new(1,0,0,30)
-keyTitle.Text = "Tsubasa Hub Login"
-keyTitle.TextColor3 = Color3.new(1,1,1)
-keyTitle.BackgroundTransparency = 1
-
-local keyBox = Instance.new("TextBox", keyFrame)
-keyBox.Size = UDim2.new(0,220,0,34)
-keyBox.Position = UDim2.new(0.5,-110,0,45)
-keyBox.PlaceholderText = "Enter Key"
-keyBox.BackgroundColor3 = Color3.fromRGB(60,60,60)
-keyBox.TextColor3 = Color3.new(1,1,1)
-Instance.new("UICorner",keyBox)
-
-local keyStatus = Instance.new("TextLabel", keyFrame)
-keyStatus.Size = UDim2.new(1,0,0,20)
-keyStatus.Position = UDim2.new(0,0,0,85)
-keyStatus.BackgroundTransparency = 1
-keyStatus.TextColor3 = Color3.fromRGB(255,90,90)
-
-local keyBtn = Instance.new("TextButton", keyFrame)
-keyBtn.Size = UDim2.new(0,140,0,32)
-keyBtn.Position = UDim2.new(0.5,-70,0,110)
-keyBtn.Text = "LOGIN"
-keyBtn.BackgroundColor3 = Color3.fromRGB(90,90,90)
-keyBtn.TextColor3 = Color3.new(1,1,1)
-Instance.new("UICorner",keyBtn)
-
-------------------------------------------------
--- MAIN GUI
-------------------------------------------------
-local gui = Instance.new("ScreenGui", Player.PlayerGui)
-gui.Enabled = false
+local gui = Instance.new("ScreenGui",Player.PlayerGui)
 gui.ResetOnSpawn = false
 
-------------------------------------------------
--- LOGIN
-------------------------------------------------
-local logged = false
-
-keyBtn.MouseButton1Click:Connect(function()
-
-	if keyBox.Text == KEY then
-		logged = true
-		keyGui:Destroy()
-		gui.Enabled = true
-	else
-		keyStatus.Text = "Wrong Key!"
-	end
-end)
-
-------------------------------------------------
--- TOGGLE (PC ONLY)
-------------------------------------------------
-local open = true
-
-UIS.InputBegan:Connect(function(input,gp)
-
-	if gp then return end
-	if not logged then return end
-
-	if input.KeyCode == TOGGLE_KEY then
-		open = not open
-		gui.Enabled = open
-	end
-end)
-
-------------------------------------------------
--- MAIN FRAME
-------------------------------------------------
-local frame = Instance.new("Frame", gui)
-frame.Size = UDim2.new(0,220,0,340)
-frame.Position = UDim2.new(0.05,0,0.2,0)
+local frame = Instance.new("Frame",gui)
+frame.Size = UDim2.new(0,220,0,300)
+frame.Position = UDim2.new(0.05,0,0.25,0)
 frame.BackgroundColor3 = Color3.fromRGB(35,35,35)
-frame.Active = true
-frame.Draggable = true
+frame.Active=true
+frame.Draggable=true
 Instance.new("UICorner",frame)
 
 local title = Instance.new("TextLabel",frame)
-title.Size = UDim2.new(1,0,0,30)
-title.Text = "Tsubasa Hub"
-title.TextColor3 = Color3.new(1,1,1)
-title.BackgroundTransparency = 1
+title.Size=UDim2.new(1,0,0,30)
+title.Text="Tsubasa Hub"
+title.TextColor3=Color3.new(1,1,1)
+title.BackgroundTransparency=1
 
 ------------------------------------------------
--- BUTTON MAKER
+-- Button Maker
 ------------------------------------------------
-local y = 40
+local y=40
 
 local function MakeBtn(text,func)
 
-	local b = Instance.new("TextButton",frame)
-	b.Size = UDim2.new(0,180,0,34)
-	b.Position = UDim2.new(0,20,0,y)
-	y = y + 42
+	local b=Instance.new("TextButton",frame)
+	b.Size=UDim2.new(0,180,0,32)
+	b.Position=UDim2.new(0,20,0,y)
+	y=y+40
 
-	b.Text = text
-	b.TextSize = 14
-	b.BackgroundColor3 = Color3.fromRGB(70,70,70)
-	b.TextColor3 = Color3.new(1,1,1)
+	b.Text=text
+	b.TextSize=14
+	b.BackgroundColor3=Color3.fromRGB(70,70,70)
+	b.TextColor3=Color3.new(1,1,1)
 	Instance.new("UICorner",b)
 
 	b.MouseButton1Click:Connect(func)
@@ -134,115 +50,100 @@ local function MakeBtn(text,func)
 end
 
 ------------------------------------------------
--- MOBILE FLY SYSTEM
+-- FLY (STABLE)
 ------------------------------------------------
-local flying = false
+local flying=false
 local flyConn
-local moveDir = Vector3.zero
-
--- Detect thumbstick / touch move
-UIS.TouchMoved:Connect(function(input)
-
-	if flying then
-		local delta = input.Delta
-		moveDir = Vector3.new(delta.X, -delta.Y, 0)
-	end
-end)
+local flySpeed=60
 
 local function StartFly()
 
-	local char = Player.Character
+	local char=Player.Character
 	if not char then return end
 
-	local hrp = char:WaitForChild("HumanoidRootPart")
+	local hrp=char:WaitForChild("HumanoidRootPart")
 
-	local bv = Instance.new("BodyVelocity",hrp)
-	bv.Name = "FlyBV"
-	bv.MaxForce = Vector3.new(1e9,1e9,1e9)
+	local bv=Instance.new("BodyVelocity")
+	bv.Name="FlyBV"
+	bv.MaxForce=Vector3.new(9e9,9e9,9e9)
+	bv.Parent=hrp
 
-	flyConn = RunService.RenderStepped:Connect(function()
+	flyConn=RunService.RenderStepped:Connect(function()
 
 		if not flying then return end
 
-		local cam = Camera.CFrame
+		local cam=Camera.CFrame
 
-		local dir =
-			cam.RightVector * (moveDir.X/20) +
-			cam.LookVector * (moveDir.Y/20)
-
-		bv.Velocity = dir * FLY_SPEED
+		bv.Velocity =
+			cam.LookVector * flySpeed
 	end)
 end
 
 local function StopFly()
 
-	flying = false
-	moveDir = Vector3.zero
+	flying=false
 
 	if flyConn then flyConn:Disconnect() end
 
-	local char = Player.Character
+	local char=Player.Character
 	if char and char:FindFirstChild("HumanoidRootPart") then
-		local hrp = char.HumanoidRootPart
-		local bv = hrp:FindFirstChild("FlyBV")
+		local bv=char.HumanoidRootPart:FindFirstChild("FlyBV")
 		if bv then bv:Destroy() end
 	end
 end
 
 ------------------------------------------------
--- ESP
+-- ESP (WORKING)
 ------------------------------------------------
-local espOn = false
-local espCache = {}
+local espOn=false
+local espCache={}
 
-local function ApplyESP(p)
+local function AddESP(p)
 
-	if p == Player then return end
+	if p==Player then return end
 
-	local function add(char)
+	local function apply(char)
 
 		if not espOn then return end
 
-		if espCache[p] then return end
+		local h=Instance.new("Highlight",char)
+		h.FillColor=Color3.fromRGB(255,80,80)
+		h.OutlineColor=Color3.new(1,1,1)
+		h.Adornee=char
 
-		local h = Instance.new("Highlight",char)
-		h.FillColor = Color3.fromRGB(255,80,80)
-		h.OutlineColor = Color3.new(1,1,1)
-		h.Adornee = char
+		local bill=Instance.new("BillboardGui",char)
+		bill.Size=UDim2.new(0,120,0,28)
+		bill.StudsOffset=Vector3.new(0,3,0)
+		bill.AlwaysOnTop=true
 
-		local bill = Instance.new("BillboardGui",char)
-		bill.Size = UDim2.new(0,110,0,28)
-		bill.StudsOffset = Vector3.new(0,3,0)
-		bill.AlwaysOnTop = true
+		local t=Instance.new("TextLabel",bill)
+		t.Size=UDim2.new(1,0,1,0)
+		t.BackgroundTransparency=1
+		t.Text=p.Name
+		t.TextScaled=true
+		t.TextColor3=Color3.new(1,1,1)
 
-		local t = Instance.new("TextLabel",bill)
-		t.Size = UDim2.new(1,0,1,0)
-		t.BackgroundTransparency = 1
-		t.Text = p.Name
-		t.TextScaled = true
-		t.TextColor3 = Color3.new(1,1,1)
-
-		espCache[p] = {h,bill}
+		espCache[p]={h,bill}
 	end
 
-	if p.Character then add(p.Character) end
-	p.CharacterAdded:Connect(add)
+	if p.Character then apply(p.Character) end
+	p.CharacterAdded:Connect(apply)
 end
 
 local function SetESP(on)
 
-	espOn = on
+	espOn=on
 
 	if on then
 		for _,p in pairs(Players:GetPlayers()) do
-			ApplyESP(p)
+			AddESP(p)
 		end
 	else
 		for _,v in pairs(espCache) do
 			if v[1] then v[1]:Destroy() end
 			if v[2] then v[2]:Destroy() end
 		end
-		espCache = {}
+		espCache={}
 	end
 end
 
@@ -255,44 +156,46 @@ local function OpenTP()
 
 	if tpFrame then tpFrame:Destroy() end
 
-	tpFrame = Instance.new("Frame",gui)
-	tpFrame.Size = UDim2.new(0,220,0,280)
-	tpFrame.Position = UDim2.new(0.4,0,0.2,0)
-	tpFrame.BackgroundColor3 = Color3.fromRGB(45,45,45)
-	tpFrame.Active = true
-	tpFrame.Draggable = true
+	tpFrame=Instance.new("Frame",gui)
+	tpFrame.Size=UDim2.new(0,220,0,260)
+	tpFrame.Position=UDim2.new(0.4,0,0.2,0)
+	tpFrame.BackgroundColor3=Color3.fromRGB(45,45,45)
+	tpFrame.Active=true
+	tpFrame.Draggable=true
 	Instance.new("UICorner",tpFrame)
 
-	local close = Instance.new("TextButton",tpFrame)
-	close.Size = UDim2.new(0,60,0,26)
-	close.Position = UDim2.new(1,-65,0,6)
-	close.Text = "X"
-	close.BackgroundColor3 = Color3.fromRGB(160,70,70)
-	close.TextColor3 = Color3.new(1,1,1)
+	local close=Instance.new("TextButton",tpFrame)
+	close.Size=UDim2.new(0,50,0,24)
+	close.Position=UDim2.new(1,-55,0,5)
+	close.Text="X"
+	close.BackgroundColor3=Color3.fromRGB(150,60,60)
+	close.TextColor3=Color3.new(1,1,1)
 	Instance.new("UICorner",close)
 
 	close.MouseButton1Click:Connect(function()
 		tpFrame:Destroy()
-		tpFrame = nil
+		tpFrame=nil
 	end)
 
-	local scroll = Instance.new("ScrollingFrame",tpFrame)
-	scroll.Size = UDim2.new(1,-10,1,-40)
-	scroll.Position = UDim2.new(0,5,0,35)
-	scroll.BackgroundTransparency = 1
+	local scroll=Instance.new("ScrollingFrame",tpFrame)
+	scroll.Size=UDim2.new(1,-10,1,-40)
+	scroll.Position=UDim2.new(0,5,0,35)
+	scroll.CanvasSize=UDim2.new(0,0,0,0)
+	scroll.BackgroundTransparency=1
 
-	local layout = Instance.new("UIListLayout",scroll)
+	local layout=Instance.new("UIListLayout",scroll)
+	layout.Padding=UDim.new(0,5)
 
 	for _,p in pairs(Players:GetPlayers()) do
 
-		if p ~= Player then
+		if p~=Player then
 
-			local b = Instance.new("TextButton",scroll)
-			b.Size = UDim2.new(1,0,0,32)
-			b.Text = p.Name
-			b.TextSize = 14
-			b.BackgroundColor3 = Color3.fromRGB(70,70,70)
-			b.TextColor3 = Color3.new(1,1,1)
+			local b=Instance.new("TextButton",scroll)
+			b.Size=UDim2.new(1,0,0,32)
+			b.Text=p.Name
+			b.TextSize=14
+			b.BackgroundColor3=Color3.fromRGB(70,70,70)
+			b.TextColor3=Color3.new(1,1,1)
 			Instance.new("UICorner",b)
 
 			b.MouseButton1Click:Connect(function()
@@ -304,41 +207,45 @@ local function OpenTP()
 			end)
 		end
 	end
+
+	layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+		scroll.CanvasSize=UDim2.new(0,0,0,layout.AbsoluteContentSize.Y+5)
+	end)
 end
 
 ------------------------------------------------
 -- BUTTONS
 ------------------------------------------------
-local flyBtn = MakeBtn("Fly : OFF",function()
+local flyBtn=MakeBtn("Fly : OFF",function()
 
-	flying = not flying
+	flying=not flying
 
 	if flying then
-		flyBtn.Text = "Fly : ON"
+		flyBtn.Text="Fly : ON"
 		StartFly()
 	else
-		flyBtn.Text = "Fly : OFF"
+		flyBtn.Text="Fly : OFF"
 		StopFly()
 	end
 end)
 
 MakeBtn("Jump",function()
 
-	local h = Player.Character and Player.Character:FindFirstChild("Humanoid")
-	if h then h:ChangeState(Enum.HumanoidStateType.Jumping) end
+	local h=Player.Character and Player.Character:FindFirstChild("Humanoid")
+	if h then h:ChangeState(Enum.HumanoidStateType.Jumping") end
 end)
 
 MakeBtn("Teleport",function()
 	OpenTP()
 end)
 
-local espBtn = MakeBtn("ESP : OFF",function()
+local espBtn=MakeBtn("ESP : OFF",function()
 
-	espOn = not espOn
-	espBtn.Text = "ESP : "..(espOn and "ON" or "OFF")
+	espOn=not espOn
+	espBtn.Text="ESP : "..(espOn and "ON" or "OFF")
 	SetESP(espOn)
 end)
 
 MakeBtn("Close",function()
-	gui.Enabled = false
+	gui:Destroy()
 end)
